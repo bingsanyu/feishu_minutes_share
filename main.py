@@ -1,6 +1,7 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+import time
 from share_minutes import ShareMinutes
 
 # 企业自建应用
@@ -36,6 +37,8 @@ class Handler(BaseHTTPRequestHandler):
         # doc: https://open.feishu.cn/document/server-docs/vc-v1/meeting/events/all_meeting_ended
         # api: 获取所有视频会议信息 vc:meeting.all_meeting:readonly
         elif post_data['header']['event_type'] == 'vc.meeting.all_meeting_ended_v1':
+            # 打印当前时间
+            print(time.strftime("\n %Y-%m-%d %H:%M:%S", time.localtime()))
             meeting_id = post_data['event']['meeting']['id']
             # 返回HTTP 200 状态码
             self.send_response(200)

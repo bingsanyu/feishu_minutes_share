@@ -1,4 +1,3 @@
-import datetime
 import requests
 import json
 
@@ -60,8 +59,6 @@ class ShareMinutes:
         if 'data' not in response.json():
             return False
         self.object_token = response.json()['data']['recording']['url'][-24:]
-        # 打印当前时间
-        print(datetime.datetime.now().strftime('\n%Y-%m-%d %H:%M:%S'))
         print(f'https://meetings.feishu.cn/minutes/{self.object_token}/')
         return True
 
