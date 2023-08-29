@@ -14,6 +14,10 @@ receive_user_id = ''
 # doc: https://open.feishu.cn/document/server-docs/authentication-management/login-state-management/obtain-code
 code = ''
 
+# 监听地址配置
+ip = '' # 如'localhost'或'127.0.0.1'或'192.168.1.123'
+port = # 如8000
+
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -50,7 +54,7 @@ class Server(HTTPServer):
     allow_reuse_address = True
 
 def start_server():
-    server = Server(('localhost', 61123), Handler)
+    server = Server((ip, host), Handler)
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
