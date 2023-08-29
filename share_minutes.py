@@ -1,4 +1,3 @@
-import time
 import datetime
 import requests
 import json
@@ -26,7 +25,6 @@ class ShareMinutes:
         response = requests.post(app_access_token_url, data=payload)
         self.app_access_token = response.json()['app_access_token']
         response.close()
-        print(f'app_access_token: {self.app_access_token}')
 
     # 获取user_access_token和refresh_token
     # https://open.feishu.cn/document/server-docs/authentication-management/access-token/create-2
@@ -48,8 +46,6 @@ class ShareMinutes:
         self.user_access_token = response.json()['data']['access_token']
         self.refresh_token = response.json()['data']['refresh_token']
         response.close()
-        print(f'user_access_token: {self.user_access_token}')
-        print(f'refresh_token: {self.refresh_token}')
 
     # 获取录制文件的object_token
     # doc: https://open.feishu.cn/document/server-docs/vc-v1/meeting-recording/get
@@ -62,13 +58,12 @@ class ShareMinutes:
         response = requests.get(meeting_recording_url, headers=headers)
         # 如果没有录制文件，返回的json中没有data字段
         if 'data' not in response.json():
-            return 1
+            return False
         self.object_token = response.json()['data']['recording']['url'][-24:]
-        
-        print(response.json())
         # 打印当前时间
         print(datetime.datetime.now().strftime('\n%Y-%m-%d %H:%M:%S'))
-        print(f'妙记id: {self.object_token}')
+        print(f'https://meetings.feishu.cn/minutes/{self.object_token}/')
+        return True
 
     # 刷新user_access_token
     # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/create
@@ -85,9 +80,8 @@ class ShareMinutes:
         response = requests.request("POST", refresh_token_url, headers=headers, data=payload)
         self.user_access_token = response.json()['data']['access_token']
         self.refresh_token = response.json()['data']['refresh_token']
-        print(f'user_access_token: {self.user_access_token}')
-        print(f'refresh_token: {self.refresh_token}')
         response.close()
+        return True
 
     # 开启链接分享
     # doc: https://open.feishu.cn/document/server-docs/docs/permission/permission-public/patch-2
@@ -108,11 +102,11 @@ class ShareMinutes:
             'Content-Type': 'application/json; charset=utf-8'
         }
         response = requests.patch(url, headers=headers, data=payload)
+        response.close()
         # 如果code为0，表示成功
         if response.json()['code'] == 0:
             print('开启链接分享成功')
-        print(response.json())
-        response.close()
+            return True
 
     # 添加协作者
     # doc: https://open.feishu.cn/document/server-docs/vc-v1/meeting-recording/set_permission
@@ -144,6 +138,7 @@ class ShareMinutes:
             user_name = response.json()['data']['user']['name']
             response.close()
             print(f'添加 {user_name} 为协作者成功')
+            return True
 
     # 获取tenant_access_token
     # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/tenant_access_token_internal
@@ -165,7 +160,6 @@ class ShareMinutes:
     # api: 获取与发送单聊、群组消息 im:message
     def send_message(self):
         tenant_access_token = self.get_tenant_access_token()
-        print(f'tenant_access_token: {tenant_access_token}')
         minutes_url = f"https://meetings.feishu.cn/minutes/{self.object_token}"
         send_message_url = "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=user_id"
         payload = json.dumps({
@@ -173,24 +167,16 @@ class ShareMinutes:
             "msg_type": "text",
             "content": json.dumps({"text":f"{minutes_url}"})
         })
-        print(payload)
         headers = {
             'Authorization': f'Bearer {tenant_access_token}',
             'Content-Type': 'application/json; charset=utf-8'
         }
         response = requests.post(send_message_url, headers=headers, data=payload)
-        print(response.json())
+        response.close()
         # 如果code为0，表示成功
         if response.json()['code'] == 0:
             print('发送消息通知成功')
-        response.close()
-
-
+            return True
 
     def run(self, meeting_id):
-        if self.get_minute_id(meeting_id) == 1:
-            return
-        self.refresh_user_access_token()
-        self.set_permission(meeting_id)
-        self.set_public()
-        self.send_message()
+        return self.get_minute_id(meeting_id) and self.refresh_user_access_token() and self.set_permission(meeting_id) and self.set_public() and self.send_message() 

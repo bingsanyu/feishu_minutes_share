@@ -20,19 +20,27 @@ class Handler(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
         post_data = json.loads(post_data.decode('utf-8'))
+        # 事件订阅的请求地址配置验证
         if 'challenge' in post_data and post_data['type'] == 'url_verification':
             response = {'challenge': post_data['challenge']}
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(response).encode('utf-8'))
+            
+        # 事件订阅: 企业会议结束v2.0 vc.meeting.all_meeting_ended_v1
+        # doc: https://open.feishu.cn/document/server-docs/vc-v1/meeting/events/all_meeting_ended
+        # api: 获取所有视频会议信息 vc:meeting.all_meeting:readonly
         elif post_data['header']['event_type'] == 'vc.meeting.all_meeting_ended_v1':
-            # 事件订阅: 企业会议结束v2.0 vc.meeting.all_meeting_ended_v1
-            # doc: https://open.feishu.cn/document/server-docs/vc-v1/meeting/events/all_meeting_ended
-            # api: 获取所有视频会议信息 vc:meeting.all_meeting:readonly
             meeting_id = post_data['event']['meeting']['id']
+            # 返回HTTP 200 状态码
+            self.send_response(200)
+            self.end_headers()
             try:
-                share_minutes.run(meeting_id)
+                while(True):
+                    time.sleep(5)
+                    if share_minutes.run(meeting_id):
+                        break
             except Exception as e:
                 print(e)
         else:
