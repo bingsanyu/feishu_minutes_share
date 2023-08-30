@@ -178,6 +178,6 @@ class ShareMinutes:
         print(f'会议结束: {meeting_id}')
         time.sleep(7)
         while True:
-            if self.get_minute_id(meeting_id) and self.refresh_user_access_token() and self.set_permission(meeting_id) and self.set_public() and self.send_message():
+            if self.refresh_user_access_token() and self.get_minute_id(meeting_id) and self.set_permission(meeting_id) and self.set_public() and self.send_message():
                 break
             time.sleep(1)
