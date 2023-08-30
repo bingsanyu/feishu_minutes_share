@@ -2,6 +2,12 @@ import requests
 import json
 import time
 
+
+proxies = {
+            'http': None,
+            'https': None
+        }
+
 class ShareMinutes:
     def __init__(self, app_id, app_secret, code, receive_user_id):
         self.app_id = app_id
@@ -21,7 +27,7 @@ class ShareMinutes:
             "app_id": self.app_id,
             "app_secret": self.app_secret
         })
-        response = requests.post(app_access_token_url, data=payload)
+        response = requests.post(app_access_token_url, data=payload, proxies = proxies)
         self.app_access_token = response.json()['app_access_token']
         response.close()
 
@@ -37,7 +43,7 @@ class ShareMinutes:
             'Content-Type': 'application/json',
             'Authorization' : f'Bearer {self.app_access_token}'
         }
-        response = requests.post(access_token_url, headers=headers, data=payload)
+        response = requests.post(access_token_url, headers=headers, data=payload, proxies = proxies)
         # 如果返回值不为0，表示code已过期，需要重新获取
         if response.json()['code'] != 0:
             print('code已过期，请手动重新获取！')
@@ -54,7 +60,7 @@ class ShareMinutes:
         headers = {
             'Authorization': f'Bearer {self.app_access_token}'
         }
-        response = requests.get(meeting_recording_url, headers=headers)
+        response = requests.get(meeting_recording_url, headers=headers, proxies = proxies)
         # 如果没有录制文件，返回的json中没有data字段
         if 'data' not in response.json():
             print('录制文件还未生成，等待1s后重试……')
@@ -75,7 +81,7 @@ class ShareMinutes:
             'Authorization': f'Bearer {self.app_access_token}',
             'Content-Type': 'application/json; charset=utf-8'
         }
-        response = requests.request("POST", refresh_token_url, headers=headers, data=payload)
+        response = requests.request("POST", refresh_token_url, headers=headers, data=payload, proxies = proxies)
         self.user_access_token = response.json()['data']['access_token']
         self.refresh_token = response.json()['data']['refresh_token']
         response.close()
@@ -99,7 +105,7 @@ class ShareMinutes:
             'Authorization': f'Bearer {self.user_access_token}',
             'Content-Type': 'application/json; charset=utf-8'
         }
-        response = requests.patch(url, headers=headers, data=payload)
+        response = requests.patch(url, headers=headers, data=payload, proxies = proxies)
         response.close()
         if response.json()['code'] == 0:
             print('开启链接分享成功！')
@@ -124,13 +130,13 @@ class ShareMinutes:
         headers = {
             'Authorization': f'Bearer {self.user_access_token}'
         }
-        response = requests.patch(set_permission_url, headers=headers, data=payload)
+        response = requests.patch(set_permission_url, headers=headers, data=payload, proxies = proxies)
         response.close()
         if response.json()['code'] == 0:
             # doc: https://open.feishu.cn/document/server-docs/contact-v3/user/get
             # api: 以应用身份读取通讯录 contact:contact:readonly_as_app
             get_user_info_url = f"https://open.feishu.cn/open-apis/contact/v3/users/{self.receive_user_id}?user_id_type=user_id"
-            response = requests.get(get_user_info_url, headers=headers)
+            response = requests.get(get_user_info_url, headers=headers, proxies = proxies)
             user_name = response.json()['data']['user']['name']
             response.close()
             print(f'添加 {user_name} 为协作者成功！')
@@ -147,7 +153,7 @@ class ShareMinutes:
         headers = {
             'Content-Type': 'application/json; charset=utf-8'
         }
-        response = requests.post(get_tenant_access_token_url, headers=headers, data=payload)
+        response = requests.post(get_tenant_access_token_url, headers=headers, data=payload, proxies = proxies)
         tenant_access_token = response.json()['tenant_access_token']
         return tenant_access_token
 
@@ -167,7 +173,7 @@ class ShareMinutes:
             'Authorization': f'Bearer {tenant_access_token}',
             'Content-Type': 'application/json; charset=utf-8'
         }
-        response = requests.post(send_message_url, headers=headers, data=payload)
+        response = requests.post(send_message_url, headers=headers, data=payload, proxies = proxies)
         response.close()
         if response.json()['code'] == 0:
             print('发送消息通知成功！')
