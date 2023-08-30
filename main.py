@@ -1,7 +1,6 @@
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
-import time
 from share_minutes import ShareMinutes
 
 # 企业自建应用
@@ -37,36 +36,22 @@ class Handler(BaseHTTPRequestHandler):
         # doc: https://open.feishu.cn/document/server-docs/vc-v1/meeting/events/all_meeting_ended
         # api: 获取所有视频会议信息 vc:meeting.all_meeting:readonly
         elif post_data['header']['event_type'] == 'vc.meeting.all_meeting_ended_v1':
-            # 打印当前时间
-            print(time.strftime("\n %Y-%m-%d %H:%M:%S", time.localtime()))
             meeting_id = post_data['event']['meeting']['id']
             # 返回HTTP 200 状态码
             self.send_response(200)
+            self.send_header('Content-type', 'application/json')
             self.end_headers()
-            try:
-                while(True):
-                    time.sleep(5)
-                    if share_minutes.run(meeting_id):
-                        break
-            except Exception as e:
-                print(e)
+            # 开启线程
+            t = threading.Thread(target=share_minutes.run, args=(meeting_id,))
+            t.start()
         else:
             pass
 
-class Server(HTTPServer):
-    allow_reuse_address = True
-
-def start_server():
-    server = Server((ip, host), Handler)
-    server_thread = threading.Thread(target=server.serve_forever)
-    server_thread.daemon = True
-    server_thread.start()
 
 if __name__ == '__main__':
+    server = HTTPServer((ip, port), Handler)
     share_minutes = ShareMinutes(app_id, app_serect, code, receive_user_id)
     share_minutes.get_app_access_token()
     share_minutes.get_user_access_token_and_refresh_token()
-    print('初始化完成')
-    start_server()
-    while True:
-        pass
+    print(f'初始化完成，正在监听{ip}:{port}')
+    server.serve_forever()

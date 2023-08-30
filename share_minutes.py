@@ -1,6 +1,6 @@
 import requests
 import json
-
+import time
 
 class ShareMinutes:
     def __init__(self, app_id, app_secret, code, receive_user_id):
@@ -40,7 +40,7 @@ class ShareMinutes:
         response = requests.post(access_token_url, headers=headers, data=payload)
         # 如果返回值不为0，表示code已过期，需要重新获取
         if response.json()['code'] != 0:
-            print('code已过期，请手动重新获取')
+            print('code已过期，请手动重新获取！')
             exit()
         self.user_access_token = response.json()['data']['access_token']
         self.refresh_token = response.json()['data']['refresh_token']
@@ -57,6 +57,7 @@ class ShareMinutes:
         response = requests.get(meeting_recording_url, headers=headers)
         # 如果没有录制文件，返回的json中没有data字段
         if 'data' not in response.json():
+            print('录制文件还未生成，等待1s后重试……')
             return False
         self.object_token = response.json()['data']['recording']['url'][-24:]
         print(f'https://meetings.feishu.cn/minutes/{self.object_token}/')
@@ -100,9 +101,8 @@ class ShareMinutes:
         }
         response = requests.patch(url, headers=headers, data=payload)
         response.close()
-        # 如果code为0，表示成功
         if response.json()['code'] == 0:
-            print('开启链接分享成功')
+            print('开启链接分享成功！')
             return True
 
     # 添加协作者
@@ -126,7 +126,6 @@ class ShareMinutes:
         }
         response = requests.patch(set_permission_url, headers=headers, data=payload)
         response.close()
-        # 如果code为0，表示成功
         if response.json()['code'] == 0:
             # doc: https://open.feishu.cn/document/server-docs/contact-v3/user/get
             # api: 以应用身份读取通讯录 contact:contact:readonly_as_app
@@ -134,7 +133,7 @@ class ShareMinutes:
             response = requests.get(get_user_info_url, headers=headers)
             user_name = response.json()['data']['user']['name']
             response.close()
-            print(f'添加 {user_name} 为协作者成功')
+            print(f'添加 {user_name} 为协作者成功！')
             return True
 
     # 获取tenant_access_token
@@ -170,10 +169,15 @@ class ShareMinutes:
         }
         response = requests.post(send_message_url, headers=headers, data=payload)
         response.close()
-        # 如果code为0，表示成功
         if response.json()['code'] == 0:
-            print('发送消息通知成功')
+            print('发送消息通知成功！')
             return True
 
     def run(self, meeting_id):
-        return self.get_minute_id(meeting_id) and self.refresh_user_access_token() and self.set_permission(meeting_id) and self.set_public() and self.send_message() 
+        print(time.strftime("\n%Y-%m-%d %H:%M:%S", time.localtime()))
+        print(f'会议结束: {meeting_id}')
+        while True:
+            time.sleep(7)
+            if self.get_minute_id(meeting_id) and self.refresh_user_access_token() and self.set_permission(meeting_id) and self.set_public() and self.send_message():
+                break
+            time.sleep(1)
