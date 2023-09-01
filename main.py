@@ -50,8 +50,8 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == '__main__':
     server = HTTPServer((ip, port), Handler)
-    share_minutes = ShareMinutes(app_id, app_serect, code, receive_user_id)
+    share_minutes = ShareMinutes(app_id, app_serect, receive_user_id)
     share_minutes.get_app_access_token()
-    share_minutes.get_user_access_token_and_refresh_token()
+    share_minutes.get_refresh_token(code, app_access_token )
     print(f'初始化完成，正在监听{ip}:{port}')
     server.serve_forever()

@@ -28,16 +28,18 @@ class ShareMinutes:
             "app_secret": self.app_secret
         })
         response = requests.post(app_access_token_url, data=payload, proxies = proxies)
+        if response.json()['code'] != 0:
+            print('获取app_access_token失败，请检查app_id和app_secret！')
+            exit()
         self.app_access_token = response.json()['app_access_token']
-        response.close()
 
-    # 获取user_access_token和refresh_token
+    # 获取refresh_token
     # https://open.feishu.cn/document/server-docs/authentication-management/access-token/create-2
-    def get_user_access_token_and_refresh_token(self):
+    def get_refresh_token(self, code):
         access_token_url = "https://open.feishu.cn/open-apis/authen/v1/access_token"
         payload = json.dumps({
             "grant_type": 'authorization_code',
-            "code": self.code
+            "code": code
         })
         headers = {
             'Content-Type': 'application/json',
@@ -48,30 +50,11 @@ class ShareMinutes:
         if response.json()['code'] != 0:
             print('code已过期，请手动重新获取！')
             exit()
-        self.user_access_token = response.json()['data']['access_token']
         self.refresh_token = response.json()['data']['refresh_token']
-        response.close()
-
-    # 获取录制文件的object_token
-    # doc: https://open.feishu.cn/document/server-docs/vc-v1/meeting-recording/get
-    # api: 获取会议录制信息 vc:record:readonly
-    def get_minute_id(self, meeting_id):
-        meeting_recording_url = f"https://open.feishu.cn/open-apis/vc/v1/meetings/{meeting_id}/recording"
-        headers = {
-            'Authorization': f'Bearer {self.app_access_token}'
-        }
-        response = requests.get(meeting_recording_url, headers=headers, proxies = proxies)
-        # 如果没有录制文件，返回的json中没有data字段
-        if 'data' not in response.json():
-            print('录制文件还未生成，等待1s后重试……')
-            return False
-        self.object_token = response.json()['data']['recording']['url'][-24:]
-        print(f'https://meetings.feishu.cn/minutes/{self.object_token}/')
-        return True
 
     # 刷新user_access_token
     # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/create
-    def refresh_user_access_token(self):
+    def get_user_access_token(self):
         refresh_token_url = "https://open.feishu.cn/open-apis/authen/v1/refresh_access_token"
         payload = json.dumps({
             "grant_type": "refresh_token",
@@ -82,9 +65,26 @@ class ShareMinutes:
             'Content-Type': 'application/json; charset=utf-8'
         }
         response = requests.request("POST", refresh_token_url, headers=headers, data=payload, proxies = proxies)
+        if response.json()['code'] != 0:
+            print('刷新user_access_token失败！')
+            exit()
         self.user_access_token = response.json()['data']['access_token']
         self.refresh_token = response.json()['data']['refresh_token']
-        response.close()
+
+    # 获取录制文件的object_token
+    # doc: https://open.feishu.cn/document/server-docs/vc-v1/meeting-recording/get
+    # api: 获取会议录制信息 vc:record:readonly
+    def get_minute_id(self, meeting_id):
+        meeting_recording_url = f"https://open.feishu.cn/open-apis/vc/v1/meetings/{meeting_id}/recording"
+        headers = {
+            'Authorization': f'Bearer {self.app_access_token}'
+        }
+        response = requests.get(meeting_recording_url, headers=headers, proxies = proxies)
+        if 'data' not in response.json():
+            print('获取录制文件失败，可能是还未生成。等待1s后重试……')
+            return False
+        self.object_token = response.json()['data']['recording']['url'][-24:]
+        print(f'https://meetings.feishu.cn/minutes/{self.object_token}/')
         return True
 
     # 开启链接分享
@@ -106,10 +106,10 @@ class ShareMinutes:
             'Content-Type': 'application/json; charset=utf-8'
         }
         response = requests.patch(url, headers=headers, data=payload, proxies = proxies)
-        response.close()
         if response.json()['code'] == 0:
             print('开启链接分享成功！')
-            return True
+        else:
+            print('开启链接分享失败')
 
     # 添加协作者
     # doc: https://open.feishu.cn/document/server-docs/vc-v1/meeting-recording/set_permission
@@ -131,16 +131,20 @@ class ShareMinutes:
             'Authorization': f'Bearer {self.user_access_token}'
         }
         response = requests.patch(set_permission_url, headers=headers, data=payload, proxies = proxies)
-        response.close()
         if response.json()['code'] == 0:
             # doc: https://open.feishu.cn/document/server-docs/contact-v3/user/get
             # api: 以应用身份读取通讯录 contact:contact:readonly_as_app
             get_user_info_url = f"https://open.feishu.cn/open-apis/contact/v3/users/{self.receive_user_id}?user_id_type=user_id"
             response = requests.get(get_user_info_url, headers=headers, proxies = proxies)
-            user_name = response.json()['data']['user']['name']
-            response.close()
-            print(f'添加 {user_name} 为协作者成功！')
-            return True
+            if response.json()['code'] == 0:
+                user_name = response.json()['data']['user']['name']
+                print(f'添加 {user_name} 为协作者成功！')
+            else:
+                print('添加协作者失败，请检查是否存在该用户!')
+                exit()
+        else:
+            print('添加协作者失败！')
+            exit()
 
     # 获取tenant_access_token
     # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/tenant_access_token_internal
@@ -154,6 +158,9 @@ class ShareMinutes:
             'Content-Type': 'application/json; charset=utf-8'
         }
         response = requests.post(get_tenant_access_token_url, headers=headers, data=payload, proxies = proxies)
+        if response.json()['code'] != 0:
+            print('获取tenant_access_token失败，请检查app_id和app_secret！')
+            exit()
         tenant_access_token = response.json()['tenant_access_token']
         return tenant_access_token
 
@@ -174,16 +181,22 @@ class ShareMinutes:
             'Content-Type': 'application/json; charset=utf-8'
         }
         response = requests.post(send_message_url, headers=headers, data=payload, proxies = proxies)
-        response.close()
         if response.json()['code'] == 0:
             print('发送消息通知成功！')
-            return True
+        else:
+            print('发送消息通知失败！')
+            exit()
 
     def run(self, meeting_id):
         print(time.strftime("\n%Y-%m-%d %H:%M:%S", time.localtime()))
         print(f'会议结束: {meeting_id}')
+        self.get_app_access_token()
+        self.get_user_access_token()
         time.sleep(7)
-        while True:
-            if self.refresh_user_access_token() and self.get_minute_id(meeting_id) and self.set_permission(meeting_id) and self.set_public() and self.send_message():
+        for _ in range(10):
+            if self.get_minute_id(meeting_id):
                 break
             time.sleep(1)
+        self.send_message()
+        self.set_permission(meeting_id)
+        self.set_public()
