@@ -97,7 +97,7 @@ class ShareMinutes:
             "copy_entity": "anyone_can_view",
             "external_access_entity": "open",
             "link_share_entity": "tenant_readable",
-            "manage_collaborator_entity": "collaborator_can_view",
+            "manage_collaborator_entity": "collaborator_full_access",
             "security_entity": "anyone_can_view",
             "share_entity": "same_tenant"
         })
