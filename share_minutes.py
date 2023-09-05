@@ -1,12 +1,8 @@
+import time, json
 import requests
-import json
-import time
 
 
-proxies = {
-            'http': None,
-            'https': None
-        }
+proxies = {'http': None, 'https': None}
 
 class ShareMinutes:
     def __init__(self, app_id, app_secret, code, receive_user_id):
@@ -20,7 +16,7 @@ class ShareMinutes:
         self.object_token = ''
 
     # 获取app_access_token
-    # https://open.feishu.cn/document/server-docs/authentication-management/access-token/app_access_token_internal
+    # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/app_access_token_internal
     def get_app_access_token(self):
         app_access_token_url = "https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal"
         payload = json.dumps({
@@ -34,7 +30,7 @@ class ShareMinutes:
         self.app_access_token = response.json()['app_access_token']
 
     # 获取refresh_token
-    # https://open.feishu.cn/document/server-docs/authentication-management/access-token/create-2
+    # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/create-2
     def get_refresh_token(self, code):
         access_token_url = "https://open.feishu.cn/open-apis/authen/v1/access_token"
         payload = json.dumps({
@@ -81,7 +77,6 @@ class ShareMinutes:
         }
         response = requests.get(meeting_recording_url, headers=headers, proxies = proxies)
         if 'data' not in response.json():
-            print('获取录制文件失败，可能是还未生成。等待1s后重试……')
             return False
         self.object_token = response.json()['data']['recording']['url'][-24:]
         print(f'https://meetings.feishu.cn/minutes/{self.object_token}/')
@@ -192,11 +187,14 @@ class ShareMinutes:
         print(f'会议结束: {meeting_id}')
         self.get_app_access_token()
         self.get_user_access_token()
+
+        # 会议结束到回放生成需要一段时间
         time.sleep(7)
-        for _ in range(10):
-            if self.get_minute_id(meeting_id):
+        for _ in range(120):
+            if self.get_minute_id(meeting_id): # 此接口频率限制为1000次/分钟、50次/秒
                 break
-            time.sleep(1)
+            time.sleep(0.05)
+
         self.send_message()
         self.set_permission(meeting_id)
         self.set_public()
