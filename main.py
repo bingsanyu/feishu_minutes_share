@@ -1,6 +1,5 @@
-import json
+import json, threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
-import threading
 from share_minutes import ShareMinutes
 
 # 企业自建应用
@@ -24,7 +23,9 @@ class Handler(BaseHTTPRequestHandler):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length)
         post_data = json.loads(post_data.decode('utf-8'))
-        # 事件订阅的请求地址配置验证
+
+        # 配置请求地址
+        # doc: https://open.feishu.cn/document/server-docs/event-subscription-guide/event-subscription-configure-/request-url-configuration-case
         if 'challenge' in post_data and post_data['type'] == 'url_verification':
             response = {'challenge': post_data['challenge']}
             self.send_response(200)
@@ -44,6 +45,7 @@ class Handler(BaseHTTPRequestHandler):
             # 开启线程
             t = threading.Thread(target=share_minutes.run, args=(meeting_id,))
             t.start()
+            
         else:
             pass
 
