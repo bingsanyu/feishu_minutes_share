@@ -1,19 +1,36 @@
-import time, json
+import os, time, json
 import requests
 
 
-proxies = {'http': None, 'https': None}
-
 class ShareMinutes:
-    def __init__(self, app_id, app_secret, code, receive_user_id):
-        self.app_id = app_id
-        self.app_secret = app_secret
-        self.code = code
-        self.receive_user_id = receive_user_id
+    def __init__(self):
+        self.app_id = os.environ.get('app_id')
+        self.app_secret = os.environ.get('app_secret')
+        self.authorized_users_id_list = os.environ.get('authorized_users_id_list')
+        self.auth_code = ''
         self.app_access_token = ''
         self.user_access_token = ''
         self.refresh_token = ''
         self.object_token = ''
+
+    # 获取登录预授权码
+    # doc: https://open.feishu.cn/document/server-docs/authentication-management/login-state-management/obtain-code
+    def get_auth_code(self):
+        cookie = os.environ.get('cookie')
+        get_auth_code_url = f'https://open.feishu.cn/open-apis/authen/v1/auth_agree?app_id={self.app_id}&from=browser'
+        data = {
+            'app_id': self.app_id,
+            'redirect_uri': "https://open.feishu.cn/api-explorer/loading",
+        }
+        headers = {
+            'cookie': cookie,
+            'open-csrf-token': cookie[cookie.find('open_csrf_token=') + len('open_csrf_token='):cookie.find(';', cookie.find('open_csrf_token='))]
+        }
+        response = requests.post(get_auth_code_url, headers=headers, json=data).text
+        self.auth_code = response[response.find('code=') + len('code='):response.find('\\', response.find('code='))]
+        if len(self.auth_code) != 32:
+            print('获取登录预授权码失败，请检查cookie！')
+            exit()
 
     # 获取app_access_token
     # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/app_access_token_internal
@@ -23,7 +40,8 @@ class ShareMinutes:
             "app_id": self.app_id,
             "app_secret": self.app_secret
         })
-        response = requests.post(app_access_token_url, data=payload, proxies = proxies)
+        response = requests.post(app_access_token_url, data=payload)
+        print(response.json())
         if response.json()['code'] != 0:
             print('获取app_access_token失败，请检查app_id和app_secret！')
             exit()
@@ -31,21 +49,20 @@ class ShareMinutes:
 
     # 获取refresh_token
     # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/create-2
-    def get_refresh_token(self, code):
+    def get_refresh_token(self):
         access_token_url = "https://open.feishu.cn/open-apis/authen/v1/access_token"
         payload = json.dumps({
             "grant_type": 'authorization_code',
-            "code": code
+            "code": self.auth_code
         })
         headers = {
             'Content-Type': 'application/json',
             'Authorization' : f'Bearer {self.app_access_token}'
         }
-        response = requests.post(access_token_url, headers=headers, data=payload, proxies = proxies)
+        response = requests.post(access_token_url, headers=headers, data=payload)
         # 如果返回值不为0，表示code已过期，需要重新获取
         if response.json()['code'] != 0:
             print('code已过期，请手动重新获取！')
-            exit()
         self.refresh_token = response.json()['data']['refresh_token']
 
     # 刷新user_access_token
@@ -60,7 +77,7 @@ class ShareMinutes:
             'Authorization': f'Bearer {self.app_access_token}',
             'Content-Type': 'application/json; charset=utf-8'
         }
-        response = requests.request("POST", refresh_token_url, headers=headers, data=payload, proxies = proxies)
+        response = requests.request("POST", refresh_token_url, headers=headers, data=payload)
         if response.json()['code'] != 0:
             print('刷新user_access_token失败！')
             exit()
@@ -75,7 +92,7 @@ class ShareMinutes:
         headers = {
             'Authorization': f'Bearer {self.app_access_token}'
         }
-        response = requests.get(meeting_recording_url, headers=headers, proxies = proxies)
+        response = requests.get(meeting_recording_url, headers=headers)
         if 'data' not in response.json():
             return False
         self.object_token = response.json()['data']['recording']['url'][-24:]
@@ -100,7 +117,7 @@ class ShareMinutes:
             'Authorization': f'Bearer {self.user_access_token}',
             'Content-Type': 'application/json; charset=utf-8'
         }
-        response = requests.patch(url, headers=headers, data=payload, proxies = proxies)
+        response = requests.patch(url, headers=headers, data=payload)
         if response.json()['code'] == 0:
             print('开启链接分享成功！')
         else:
@@ -112,34 +129,39 @@ class ShareMinutes:
     # api: 获取用户userID contact:user.employee_id:readonly
     def set_permission(self, meeting_id):
         set_permission_url = f"https://open.feishu.cn/open-apis/vc/v1/meetings/{meeting_id}/recording/set_permission?user_id_type=user_id"
-        payload = json.dumps({
-            "action_type": 0,
-            "permission_objects": [
-                {
-                    "id": self.receive_user_id,
-                    "permission": 1,
-                    "type": 1
-                }
-            ]
-        })
         headers = {
-            'Authorization': f'Bearer {self.user_access_token}'
+            "Authorization": f"Bearer {self.user_access_token}"
         }
-        response = requests.patch(set_permission_url, headers=headers, data=payload, proxies = proxies)
-        if response.json()['code'] == 0:
-            # doc: https://open.feishu.cn/document/server-docs/contact-v3/user/get
-            # api: 以应用身份读取通讯录 contact:contact:readonly_as_app
-            get_user_info_url = f"https://open.feishu.cn/open-apis/contact/v3/users/{self.receive_user_id}?user_id_type=user_id"
-            response = requests.get(get_user_info_url, headers=headers, proxies = proxies)
+        all_users = self.authorized_users_id_list.split(',')
+        for authorized_user_id in all_users:
+            payload = json.dumps({
+                "action_type": 0,
+                "permission_objects": [
+                    {
+                        "id": authorized_user_id,
+                        "permission": 1,
+                        "type": 1
+                    }
+                ]
+            })
+            response = requests.patch(set_permission_url, headers=headers, data=payload)
             if response.json()['code'] == 0:
-                user_name = response.json()['data']['user']['name']
-                print(f'添加 {user_name} 为协作者成功！')
+                # doc: https://open.feishu.cn/document/server-docs/contact-v3/user/get
+                # api: 以应用身份读取通讯录 contact:contact:readonly_as_app
+                get_user_info_url = f"https://open.feishu.cn/open-apis/contact/v3/users/{authorized_user_id}?user_id_type=user_id"
+                response = requests.get(get_user_info_url, headers=headers)
+                if response.json()['code'] == 0:
+                    user_name = response.json()['data']['user']['name']
+                    print(f'添加 {user_name} 为协作者成功！')
+                    if self.send_message(authorized_user_id):
+                        print(f'发送消息给 {user_name} 失败！')
+                    else:
+                        print(f'发送消息给 {user_name} 成功！')
+                else:
+                    print(f'添加协作者id {authorized_user_id} 失败，请检查是否存在该用户!')
+                    exit()
             else:
-                print('添加协作者失败，请检查是否存在该用户!')
-                exit()
-        else:
-            print('添加协作者失败！')
-            exit()
+                print(f'添加协作者失败！{response.json()}')
 
     # 获取tenant_access_token
     # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/tenant_access_token_internal
@@ -150,9 +172,9 @@ class ShareMinutes:
             "app_secret": self.app_secret
         })
         headers = {
-            'Content-Type': 'application/json; charset=utf-8'
+            "Content-Type": "application/json; charset=utf-8"
         }
-        response = requests.post(get_tenant_access_token_url, headers=headers, data=payload, proxies = proxies)
+        response = requests.post(get_tenant_access_token_url, headers=headers, data=payload)
         if response.json()['code'] != 0:
             print('获取tenant_access_token失败，请检查app_id和app_secret！')
             exit()
@@ -162,39 +184,37 @@ class ShareMinutes:
     # 发送消息通知
     # doc: https://open.feishu.cn/document/server-docs/im-v1/message/create
     # api: 获取与发送单聊、群组消息 im:message
-    def send_message(self):
+    def send_message(self, receive_id):
         tenant_access_token = self.get_tenant_access_token()
         minutes_url = f"https://meetings.feishu.cn/minutes/{self.object_token}"
         send_message_url = "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=user_id"
+        headers = {
+            "Authorization": f"Bearer {tenant_access_token}",
+            "Content-Type": "application/json; charset=utf-8"
+        }
         payload = json.dumps({
-            "receive_id": self.receive_user_id,
+            "receive_id": receive_id,
             "msg_type": "text",
             "content": json.dumps({"text":f"{minutes_url}"})
         })
-        headers = {
-            'Authorization': f'Bearer {tenant_access_token}',
-            'Content-Type': 'application/json; charset=utf-8'
-        }
-        response = requests.post(send_message_url, headers=headers, data=payload, proxies = proxies)
-        if response.json()['code'] == 0:
-            print('发送消息通知成功！')
-        else:
-            print('发送消息通知失败！')
-            exit()
+        response = requests.post(send_message_url, headers=headers, data=payload)
+        return response.json()['code']
 
     def run(self, meeting_id):
         print(time.strftime("\n%Y-%m-%d %H:%M:%S", time.localtime()))
         print(f'会议结束: {meeting_id}')
+
+        self.get_auth_code()
         self.get_app_access_token()
+        self.get_refresh_token()
         self.get_user_access_token()
 
         # 会议结束到回放生成需要一段时间
-        time.sleep(7)
-        for _ in range(120):
+        time.sleep(5)
+        for _ in range(200):
             if self.get_minute_id(meeting_id): # 此接口频率限制为1000次/分钟、50次/秒
                 break
             time.sleep(0.05)
 
-        self.send_message()
         self.set_permission(meeting_id)
         self.set_public()
