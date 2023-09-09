@@ -14,7 +14,7 @@ def handler(event, context):
     if response.get('payload') == "need_refresh":
         share_minutes.get_app_access_token()
         if not share_minutes.get_refresh_token():
-            if not bucket.object_exists('feishu_refresh_key'):
+            if not bucket.object_exists('feishu_refresh_key.txt'):
                 print('code失效且没有已保存的refresh。请更新code！')
                 return
             share_minutes.refresh_token = bucket.get_object('feishu_refresh_key.txt').read().decode('utf-8')
