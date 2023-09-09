@@ -1,4 +1,4 @@
-import os, json
+import os
 import fc2
 from flask import Flask, request
 
@@ -13,20 +13,17 @@ def async_proxy():
         os.environ.get('ALIYUN_FC_ASYNC_TASK_SERVICE_NAME'),
         os.environ.get('ALIYUN_FC_ASYNC_TASK_FUNCTION_NAME'),
         headers={'x-fc-invocation-type': 'Async'},
-        payload=json.dumps(request.get_data().decode('utf-8'))
+        payload=request.get_data().decode("latin1")
     )
 
-
 app = Flask(__name__)
-
 
 @app.route("/webhook", methods=['POST'])
 def feishu_webhook_event():
     payload = request.get_json()
 
-    if payload.get('type', None) == 'url_verification':
+    if payload.get('type') == 'url_verification':
         return {'challenge': payload['challenge']}
-    print(payload)
 
     if payload.get('header') and payload.get('header').get('event_type') == 'vc.meeting.all_meeting_ended_v1':
         async_proxy()

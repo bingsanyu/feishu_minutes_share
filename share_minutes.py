@@ -4,33 +4,14 @@ import requests
 
 class ShareMinutes:
     def __init__(self):
-        self.app_id = os.environ.get('app_id')
-        self.app_secret = os.environ.get('app_secret')
-        self.authorized_users_id_list = os.environ.get('authorized_users_id_list')
+        self.app_id = os.environ.get('FEISHU_APP_ID')
+        self.app_secret = os.environ.get('FEISHU_APP_SECRET')
+        self.authorized_users_id_list = os.environ.get('FEISHU_AUTHORIZED_USERS_ID_LIST')
         self.auth_code = ''
         self.app_access_token = ''
         self.user_access_token = ''
         self.refresh_token = ''
         self.object_token = ''
-
-    # 获取登录预授权码
-    # doc: https://open.feishu.cn/document/server-docs/authentication-management/login-state-management/obtain-code
-    def get_auth_code(self):
-        cookie = os.environ.get('cookie')
-        get_auth_code_url = f'https://open.feishu.cn/open-apis/authen/v1/auth_agree?app_id={self.app_id}&from=browser'
-        data = {
-            'app_id': self.app_id,
-            'redirect_uri': "https://open.feishu.cn/api-explorer/loading",
-        }
-        headers = {
-            'cookie': cookie,
-            'open-csrf-token': cookie[cookie.find('open_csrf_token=') + len('open_csrf_token='):cookie.find(';', cookie.find('open_csrf_token='))]
-        }
-        response = requests.post(get_auth_code_url, headers=headers, json=data).text
-        self.auth_code = response[response.find('code=') + len('code='):response.find('\\', response.find('code='))]
-        if len(self.auth_code) != 32:
-            print('获取登录预授权码失败，请检查cookie！')
-            exit()
 
     # 获取app_access_token
     # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/app_access_token_internal
@@ -53,17 +34,17 @@ class ShareMinutes:
         access_token_url = "https://open.feishu.cn/open-apis/authen/v1/access_token"
         payload = json.dumps({
             "grant_type": 'authorization_code',
-            "code": self.auth_code
+            "code": os.environ.get('CODE')
         })
         headers = {
-            'Content-Type': 'application/json',
-            'Authorization' : f'Bearer {self.app_access_token}'
+            "Content-Type": "application/json",
+            "Authorization" : f"Bearer {self.app_access_token}"
         }
         response = requests.post(access_token_url, headers=headers, data=payload)
-        # 如果返回值不为0，表示code已过期，需要重新获取
         if response.json()['code'] != 0:
-            print('code已过期，请手动重新获取！')
+            return False
         self.refresh_token = response.json()['data']['refresh_token']
+        return True
 
     # 刷新user_access_token
     # doc: https://open.feishu.cn/document/server-docs/authentication-management/access-token/create
@@ -204,9 +185,7 @@ class ShareMinutes:
         print(time.strftime("\n%Y-%m-%d %H:%M:%S", time.localtime()))
         print(f'会议结束: {meeting_id}')
 
-        self.get_auth_code()
         self.get_app_access_token()
-        self.get_refresh_token()
         self.get_user_access_token()
 
         # 会议结束到回放生成需要一段时间
