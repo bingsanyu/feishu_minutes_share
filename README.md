@@ -50,8 +50,7 @@
         ]
     }
     ```
-    勾选 `异步调用`。
-11. 点击触发器管理，添加一个定时触发器，触发间隔 `110分钟`，触发消息为 `need_refresh`。勾选 `异步调用`。
+11. 点击触发器管理，添加一个定时触发器，触发间隔 `110分钟`，触发消息为 `need_refresh`。
 12. 点击函数配置，添加环境变量
    - ALIYUN_ACCESS_KEY_ID: 阿里云的 accessKeyId
    - ALIYUN_ACCESS_KEY_SECRET: 阿里云的 accessKeySecret

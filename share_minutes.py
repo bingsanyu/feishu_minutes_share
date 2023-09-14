@@ -25,7 +25,7 @@ class ShareMinutes:
         print(response.json())
         if response.json()['code'] != 0:
             print('获取app_access_token失败，请检查app_id和app_secret！')
-            exit()
+            return
         self.app_access_token = response.json()['app_access_token']
 
     # 获取refresh_token
@@ -61,7 +61,7 @@ class ShareMinutes:
         response = requests.request("POST", refresh_token_url, headers=headers, data=payload)
         if response.json()['code'] != 0:
             print('刷新user_access_token失败！')
-            exit()
+            return
         self.user_access_token = response.json()['data']['access_token']
         self.refresh_token = response.json()['data']['refresh_token']
 
@@ -140,7 +140,7 @@ class ShareMinutes:
                         print(f'发送消息给 {user_name} 成功！')
                 else:
                     print(f'添加协作者id {authorized_user_id} 失败，请检查是否存在该用户!')
-                    exit()
+                    return
             else:
                 print(f'添加协作者失败！{response.json()}')
 
@@ -158,7 +158,7 @@ class ShareMinutes:
         response = requests.post(get_tenant_access_token_url, headers=headers, data=payload)
         if response.json()['code'] != 0:
             print('获取tenant_access_token失败，请检查app_id和app_secret！')
-            exit()
+            return
         tenant_access_token = response.json()['tenant_access_token']
         return tenant_access_token
 
