@@ -1,5 +1,7 @@
 基于阿里云函数计算和飞书自建应用实现会议结束后自动推送妙记消息给指定用户并授予其权限。
 
+![image](https://github.com/bingsanyu/feishu_minutes_share/assets/66949416/d6cd62c3-4688-4b6f-bf14-fb3e719ae198)
+
 ## 配置 飞书企业自建应用
 
 1. 在[飞书开放平台](https://open.feishu.cn/app/)新建一个企业自建应用。
