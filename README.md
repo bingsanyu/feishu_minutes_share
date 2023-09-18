@@ -55,14 +55,14 @@
     ```
 11. 点击触发器管理，添加一个定时触发器，触发间隔 `90分钟`，触发消息为 `need_refresh`。
 12. 点击函数配置，添加环境变量
-   - ALIYUN_ACCESS_KEY_ID: 阿里云的 accessKeyId
-   - ALIYUN_ACCESS_KEY_SECRET: 阿里云的 accessKeySecret
-   - ALIYUN_OSS_BUCKET_NAME: 阿里云OSS对象存储的bucket名
-   - ALIYUN_OSS_ENDPOINT: 阿里云OSS对象存储的endpoint
-   - CODE: 将链接`https://open.feishu.cn/open-apis/authen/v1/user_auth_page_beta?app_id={app_id}&redirect_uri={redirect_uri}` 中的`{app_id}`替换为你所建应用的`App ID`，`{redirect_uri}`替换为你设置的`重定向URL`。打开修改后的链接，出现飞书授权登录页面，点击`授权`，等待网页重定向。复制重定向后url（例如`https://open.feishu.cn/api-explorer/loading/?code=e35q1eb5a1444905924fc9f3dff4e909&state=`）中的code值。
-   - FEISHU_APP_ID: 飞书自建应用的app_id
-   - FEISHU_APP_SECRET: 飞书自建应用的app_secret
-   - FEISHU_AUTHORIZED_USERS_ID_LIST: 要接收会议推送的用户ID，可在飞书管理后台的成员详情中找到。使用英文逗号分隔（例如 `12qw34as,09oikjnb` ）
+    - ALIYUN_ACCESS_KEY_ID: 阿里云的 accessKeyId
+    - ALIYUN_ACCESS_KEY_SECRET: 阿里云的 accessKeySecret
+    - ALIYUN_OSS_BUCKET_NAME: 阿里云OSS对象存储的bucket名
+    - ALIYUN_OSS_ENDPOINT: 阿里云OSS对象存储的endpoint
+    - CODE: 将链接`https://open.feishu.cn/open-apis/authen/v1/user_auth_page_beta?app_id={app_id}&redirect_uri={redirect_uri}` 中的`{app_id}`替换为你所建应用的`App ID`，`{redirect_uri}`替换为你设置的`重定向URL`。打开修改后的链接，出现飞书授权登录页面，点击`授权`，等待网页重定向。复制重定向后url（例如`https://open.feishu.cn/api-explorer/loading/?code=e35q1eb5a1444905924fc9f3dff4e909&state=`）中的code值。
+    - FEISHU_APP_ID: 飞书自建应用的app_id
+    - FEISHU_APP_SECRET: 飞书自建应用的app_secret
+    - FEISHU_AUTHORIZED_USERS_ID_LIST: 要接收会议推送的用户ID，可在飞书管理后台的成员详情中找到。使用英文逗号分隔（例如 `12qw34as,09oikjnb` ）
 
 ### 创建http函数
 
