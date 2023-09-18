@@ -1,4 +1,4 @@
-基于阿里云函数计算和飞书自建应用实现会议结束后自动推送妙记消息给指定用户。
+基于阿里云函数计算和飞书自建应用实现会议结束后自动推送妙记消息给指定用户并授予其权限。
 
 ## 配置 飞书企业自建应用
 
@@ -8,8 +8,10 @@
     - contact:contact:readonly_as_app
     - contact:user.employee_id:readonly
     - docs:doc
+    - ehr:employee:readonly
     - im:message
     - vc:meeting.all_meeting:readonly
+    - vc:meeting:readonly
     - vc:record
     - vc:record:readonly
 4. 点击`开发配置-事件订阅-已添加事件`，添加下面的事件。
@@ -18,12 +20,11 @@
     - https://open.feishu.cn/api-explorer/loading
 6. 发布版本并由企业管理员进行审核。
 
-[飞书回调限制](https://open.feishu.cn/document/ukTMukTMukTM/uYDNxYjL2QTM24iN0EjN/event-subscription-configure-/encrypt-key-encryption-configuration-case#9cd4c9b1)要求"应用收到HTTP POST请求后，需要在3秒内以HTTP200状态码响应该请求"。
+> *[飞书回调限制](https://open.feishu.cn/document/ukTMukTMukTM/uYDNxYjL2QTM24iN0EjN/event-subscription-configure-/encrypt-key-encryption-configuration-case#9cd4c9b1)要求"应用收到HTTP POST请求后，需要在3秒内以HTTP200状态码响应该请求"。*
 
-但是，从 会议结束的事件发出 到 妙记生成 需要10秒左右的时间。
-因此，飞书的回调接口实现应该尽量少做事，收到回调后马上返回，同时再异步调用真正的业务。
+> *但是，从 会议结束的事件发出 到 妙记生成 需要10秒左右的时间。因此，飞书的回调接口实现应该尽量少做事，收到回调后马上返回，同时再异步调用真正的业务。*
 
-参考：https://github.com/wujianguo/feishu-chatgpt-access
+> *参考：https://github.com/wujianguo/feishu-chatgpt-access*
 
 ## 配置 阿里云-函数计算FC
 
@@ -50,7 +51,7 @@
         ]
     }
     ```
-11. 点击触发器管理，添加一个定时触发器，触发间隔 `110分钟`，触发消息为 `need_refresh`。
+11. 点击触发器管理，添加一个定时触发器，触发间隔 `90分钟`，触发消息为 `need_refresh`。
 12. 点击函数配置，添加环境变量
    - ALIYUN_ACCESS_KEY_ID: 阿里云的 accessKeyId
    - ALIYUN_ACCESS_KEY_SECRET: 阿里云的 accessKeySecret

@@ -6,7 +6,6 @@ from share_minutes import ShareMinutes
 
 def handler(event, context):
     response = json.loads(event)
-    print(response)
 
     share_minutes = ShareMinutes()
 
@@ -26,8 +25,9 @@ def handler(event, context):
 
     elif response.get('header') and response.get('header').get('event_type') == 'vc.meeting.all_meeting_ended_v1':
         meeting_id = response['event']['meeting']['id']
-        if not share_minutes.get_refresh_token():
-            share_minutes.refresh_token = bucket.get_object('feishu_refresh_key.txt').read().decode('utf-8')
+        share_minutes.refresh_token = bucket.get_object('feishu_refresh_key.txt').read().decode('utf-8')
+        if not share_minutes.get_user_access_token():
+            share_minutes.get_refresh_token()
         share_minutes.run(meeting_id)
         bucket.put_object('feishu_refresh_key.txt', share_minutes.refresh_token)
 
