@@ -156,7 +156,10 @@ class ShareMinutes:
         participants_id = set(participants_id)
         content = "{\"text\":\""+meeting_time+" 参会人:"
         for id in participants_id:
-            content += f"<at user_id=\\\"{id}\\\">{self.employee_dict[id]}</at>"
+            if id in self.employee_dict.keys():
+                content += f"<at user_id=\\\"{id}\\\">{self.employee_dict[id]}</at>"
+            else:
+                content += f"@飞书个人用户"
         content += "\\nhttps://meetings.feishu.cn/minutes/"+self.object_token+"\"}"
 
         
